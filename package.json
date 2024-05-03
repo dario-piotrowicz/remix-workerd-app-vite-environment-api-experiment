@@ -10,20 +10,22 @@
     "lint": "eslint --ignore-path .gitignore --cache --cache-location ./node_modules/.cache/eslint .",
     "start": "wrangler pages dev ./build/client",
     "typecheck": "tsc",
-    "typegen": "wrangler types"
+    "typegen": "wrangler types",
+    "build:worker": "tsup",
+    "build:worker:watch": "tsup --watch"
   },
   "dependencies": {
     "@remix-run/cloudflare": "^2.9.1",
     "@remix-run/cloudflare-pages": "^2.9.1",
     "@remix-run/react": "^2.9.1",
     "isbot": "^4.1.0",
-    "miniflare": "^3.20240404.0",
+    "miniflare": "^3.20240419.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20240405.0",
-    "@remix-run/dev": "^2.9.1",
+    "@remix-run/dev": "/Users/dario/Repos/my-repos/remix/packages/remix-dev",
     "@types/react": "^18.2.20",
     "@types/react-dom": "^18.2.7",
     "@typescript-eslint/eslint-plugin": "^6.7.4",
@@ -35,8 +37,9 @@
     "eslint-plugin-react": "^7.33.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "node-fetch": "^3.3.2",
+    "tsup": "^8.0.2",
     "typescript": "^5.1.6",
-    "vite": "^5.1.0",
+    "vite": "^6.0.0-alpha",
     "vite-tsconfig-paths": "^4.2.1",
     "wrangler": "^3.48.0"
   },

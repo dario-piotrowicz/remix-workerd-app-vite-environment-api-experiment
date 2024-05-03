@@ -1,35 +1,53 @@
-import type { MetaFunction } from "@remix-run/cloudflare";
+import { Form, json, useLoaderData } from '@remix-run/react';
 
-export const meta: MetaFunction = () => {
+export const meta = () => {
   return [
-    { title: "New Remix App" },
+    { title: 'New Remix App' },
     {
-      name: "description",
-      content: "Welcome to Remix! Using Vite and Cloudflare!",
+      name: 'description',
+      content: 'Welcome to Remix! Using Vite and Cloudflare!',
     },
   ];
 };
 
+function getUserAgentText(): string {
+  let result: string = '';
+  if (typeof navigator === 'undefined') {
+    result = 'navigator is undefined (running in Node.js?)';
+  } else {
+    const userAgent = navigator.userAgent;
+    result = `navigator.userAgent = ${userAgent}`;
+  }
+
+  console.log(`\x1b[31m getUserAgentText (${result}) \x1b[0m`);
+  return result;
+}
+
+export async function loader() {
+  console.log(`\x1b[34m loader \x1b[0m`);
+  return json({ userAgentText: getUserAgentText() });
+}
+
+export async function action() {
+  console.log(`\x1b[32m no-op action \x1b[0m`);
+  return null;
+}
+
 export default function Index() {
+  const { userAgentText } = useLoaderData<typeof loader>();
+
+  console.log(`\x1b[31m ===> \x1b[0m`, { userAgentText });
+
   return (
-    <div style={{ fontFamily: "system-ui, sans-serif", lineHeight: "1.8" }}>
+    <div style={{ fontFamily: 'system-ui, sans-serif', lineHeight: '1.8' }}>
       <h1>Welcome to Remix (with Vite and Cloudflare)</h1>
-      <ul>
-        <li>
-          <a
-            target="_blank"
-            href="https://developers.cloudflare.com/pages/framework-guides/deploy-a-remix-site/"
-            rel="noreferrer"
-          >
-            Cloudflare Pages Docs - Remix guide
-          </a>
-        </li>
-        <li>
-          <a target="_blank" href="https://remix.run/docs" rel="noreferrer">
-            Remix Docs
-          </a>
-        </li>
-      </ul>
+      <hr />
+      <h2>{userAgentText}</h2>
+      <hr />
+      <p>No-op form</p>
+      <Form method="POST">
+        <button>Click me</button>
+      </Form>
     </div>
   );
 }
