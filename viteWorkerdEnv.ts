@@ -3,7 +3,6 @@
 import { DevEnvironment, type HMRChannel, type ResolvedConfig } from "vite";
 
 import {
-  Log,
   Miniflare,
   Response as MiniflareResponse,
   type TypedEventListener,
@@ -40,7 +39,6 @@ async function createWorkerdDevEnvironment(
 ): Promise<DevEnvironment> {
   const mf = new Miniflare({
     modulesRoot: fileURLToPath(new URL("./", import.meta.url)),
-    log: new Log(),
     modules: [
       {
         type: "ESModule",
