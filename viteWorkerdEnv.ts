@@ -48,6 +48,8 @@ async function createWorkerdDevEnvironment(
     unsafeEvalBinding: "UNSAFE_EVAL",
     compatibilityDate: "2024-02-08",
     compatibilityFlags: ["nodejs_compat"],
+    // TODO: we should read this from a toml file and not hardcode it
+    kvNamespaces: ['MY_KV'],
     bindings: {
       ROOT: config.root,
     },
@@ -80,9 +82,18 @@ async function createWorkerdDevEnvironment(
         //       causes some error... this needs to be investigated
         return await mf.dispatchFetch(
           req.url,
-          // note: we disable encoding since this causes issues when the minilare response
-          //       gets piped into the node one
-          { headers: [["accept-encoding", "identity"]] }
+          {
+            method: req.method,
+            // @ts-ignore
+            body: req.body,
+            duplex: 'half',
+            headers: [
+              // note: we disable encoding since this causes issues when the minilare response
+              //       gets piped into the node one
+              ["accept-encoding", "identity"],
+              ...req.headers,
+            ],
+          }
         );
       };
     },

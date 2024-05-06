@@ -29,7 +29,8 @@ export default {
         return new Response('entrypoint successfully set');
     }
 
-    return entrypoint.default(req);
+    // TODO: from env we can filter out the bindings we use to integrate with the vite environment
+    return entrypoint.default(req, env, ctx);
   },
 };
 

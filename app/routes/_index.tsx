@@ -1,6 +1,11 @@
+import type {
+  ActionFunctionArgs,
+  LoaderFunctionArgs,
+  MetaFunction,
+} from '@remix-run/cloudflare';
 import { Form, json, useLoaderData } from '@remix-run/react';
 
-export const meta = () => {
+export const meta: MetaFunction = () => {
   return [
     { title: 'New Remix App' },
     {
@@ -11,32 +16,44 @@ export const meta = () => {
 };
 
 function getUserAgentText(): string {
-  let result: string = '';
   if (typeof navigator === 'undefined') {
-    result = 'navigator is undefined (running in Node.js?)';
+    return 'navigator is undefined (running in Node.js?)';
   } else {
     const userAgent = navigator.userAgent;
-    result = `navigator.userAgent = ${userAgent}`;
+    return `navigator.userAgent = ${userAgent}`;
+  }
+}
+
+const key = '__my-key__';
+
+export async function loader({ context }: LoaderFunctionArgs) {
+  console.log(`\x1b[35m loader \x1b[0m`);
+  const { MY_KV } = context.cloudflare.env;
+  const value = await MY_KV.get(key);
+  return json({ value, userAgentText: getUserAgentText() });
+}
+
+export async function action({ request, context }: ActionFunctionArgs) {
+  console.log(`\x1b[35m action \x1b[0m`);
+  const { MY_KV: myKv } = context.cloudflare.env;
+
+  if (request.method === 'POST') {
+    const formData = await request.formData();
+    const value = formData.get('value') as string;
+    await myKv.put(key, value);
+    return null;
   }
 
-  console.log(`\x1b[31m getUserAgentText (${result}) \x1b[0m`);
-  return result;
-}
+  if (request.method === 'DELETE') {
+    await myKv.delete(key);
+    return null;
+  }
 
-export async function loader() {
-  console.log(`\x1b[34m loader \x1b[0m`);
-  return json({ userAgentText: getUserAgentText() });
-}
-
-export async function action() {
-  console.log(`\x1b[32m no-op action \x1b[0m`);
-  return null;
+  throw new Error(`Method not supported: "${request.method}"`);
 }
 
 export default function Index() {
-  const { userAgentText } = useLoaderData<typeof loader>();
-
-  console.log(`\x1b[31m ===> \x1b[0m`, { userAgentText });
+  const { userAgentText, value } = useLoaderData<typeof loader>();
 
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', lineHeight: '1.8' }}>
@@ -44,10 +61,25 @@ export default function Index() {
       <hr />
       <h2>{userAgentText}</h2>
       <hr />
-      <p>No-op form</p>
-      <Form method="POST">
-        <button>Click me</button>
-      </Form>
+      <h2>KV Usage example</h2>
+      {value ? (
+        <>
+          <p>Value: {value}</p>
+          <Form method="DELETE">
+            <button>Delete</button>
+          </Form>
+        </>
+      ) : (
+        <>
+          <p>No value</p>
+          <Form method="POST">
+            <label htmlFor="value">Set value: </label>
+            <input type="text" name="value" id="value" required />
+            <br />
+            <button>Save</button>
+          </Form>
+        </>
+      )}
     </div>
   );
 }
