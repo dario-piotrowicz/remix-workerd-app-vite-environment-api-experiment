@@ -66,16 +66,9 @@ async function getModuleRunner(env: Env) {
     },
     {
       runInlinedModule: async (context, transformed, id) => {
-        // Note: we create the `exports` and `module` consts to support cjs syntax
-        //       it should be possible to just pre-bundle cjs code via optimizeDeps
-        //       and not having to set the consts, I am sure I saw that working, but
-        //       currently it does not seem to work for some reason... this should
-        //       be investigated
         const codeDefinition = `'use strict';async (${Object.keys(context).join(
           ',',
-        )})=>{{
-          const exports = __vite_ssr_exports__; const module = { exports };
-        `;
+        )})=>{{`;
         const code = `${codeDefinition}${transformed}\n}}`;
         const fn = env.UNSAFE_EVAL.eval(code, id);
         await fn(...Object.values(context));

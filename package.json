@@ -42,7 +42,9 @@
     "typescript": "^5.1.6",
     "vite": "^6.0.0-alpha",
     "vite-tsconfig-paths": "^4.2.1",
-    "wrangler": "^3.48.0"
+    "wrangler": "^3.48.0",
+    "cookie": "0.6.0",
+    "set-cookie-parser": "2.6.0"
   },
   "engines": {
     "node": ">=18.0.0"
