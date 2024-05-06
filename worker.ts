@@ -16,12 +16,21 @@ type Env = {
 };
 
 let entrypoint: any;
+let moduleRunner: ModuleRunner;
+let hmrWebSocket: WebSocket;
 
 export default {
   async fetch(req: Request, env: Env, ctx: any) {
     const url = new URL(req.url);
 
-    const moduleRunner = await getModuleRunner(env);
+    if (url.pathname === "/__init-module-runner") {
+      const pair = new WebSocketPair();
+
+      (pair[0] as any).accept();
+      hmrWebSocket = pair[0];
+      moduleRunner = await getModuleRunner(env);
+      return new Response(null, { status: 101, webSocket: pair[1] });
+    }
 
     if (url.pathname === "/__set-entrypoint") {
       const viteWorkerdEntrypoint = req.headers.get(
@@ -62,12 +71,24 @@ async function getModuleRunner(env: Env) {
           return result as any;
         },
       },
-      hmr: false,
+      hmr: {
+        connection: {
+          isReady: () => true,
+          onUpdate(callback) {
+            hmrWebSocket.addEventListener("message", (event) => {
+              callback(JSON.parse(event.data));
+            });
+          },
+          send(messages) {
+            hmrWebSocket.send(JSON.stringify(messages));
+          },
+        },
+      },
     },
     {
       runInlinedModule: async (context, transformed, id) => {
         const codeDefinition = `'use strict';async (${Object.keys(context).join(
-          ',',
+          ","
         )})=>{{`;
         const code = `${codeDefinition}${transformed}\n}}`;
         const fn = env.UNSAFE_EVAL.eval(code, id);

@@ -1,8 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { DevEnvironment, type ResolvedConfig } from "vite";
+import { DevEnvironment, type HMRChannel, type ResolvedConfig } from "vite";
 
-import { Log, Miniflare, Response as MiniflareResponse } from "miniflare";
+import {
+  Log,
+  Miniflare,
+  Response as MiniflareResponse,
+  type TypedEventListener,
+  type WebSocket,
+} from "miniflare";
 import { fileURLToPath } from "node:url";
 
 export function viteEnvironmentPluginWorkerd() {
@@ -32,8 +38,6 @@ async function createWorkerdDevEnvironment(
   name: string,
   config: any
 ): Promise<DevEnvironment> {
-  const devEnv = new DevEnvironment(name, config, {});
-
   const mf = new Miniflare({
     modulesRoot: fileURLToPath(new URL("./", import.meta.url)),
     log: new Log(),
@@ -57,7 +61,7 @@ async function createWorkerdDevEnvironment(
       __viteFetchModule: async (request) => {
         const args = await request.json();
         try {
-          const result = await devEnv.fetchModule(...(args as [any, any]));
+          const result: any = await devEnv.fetchModule(...(args as [any, any]));
           return new MiniflareResponse(JSON.stringify(result));
         } catch (error) {
           console.error("[fetchModule]", args, error);
@@ -66,6 +70,27 @@ async function createWorkerdDevEnvironment(
       },
     },
   });
+
+  const resp = await mf.dispatchFetch("http:0.0.0.0/__init-module-runner", {
+    headers: {
+      upgrade: "websocket",
+    },
+  });
+  if (!resp.ok) {
+    throw new Error("Error: failed to initialize the module runner!");
+  }
+
+  const webSocket = resp.webSocket;
+
+  if (!webSocket) {
+    console.error(
+      "\x1b[33m⚠️ failed to create a websocket for HMR (hmr disabled)\x1b[0m"
+    );
+  }
+
+  const hot = webSocket ? createHMRChannel(webSocket!, name) : false;
+
+  const devEnv = new DevEnvironment(name, config, { hot });
 
   let entrypointSet = false;
   (devEnv as any).api = {
@@ -103,4 +128,56 @@ async function createWorkerdDevEnvironment(
   };
 
   return devEnv;
+}
+function createHMRChannel(webSocket: WebSocket, name: string): HMRChannel {
+  webSocket.accept();
+
+  const hotEventListenersMap = new Map<
+    string,
+    Set<(...args: any[]) => unknown>
+  >();
+  let hotDispose: (() => void) | undefined;
+
+  return {
+    name,
+    listen() {
+      const listener: TypedEventListener<MessageEvent> = (data) => {
+        const payload = JSON.parse(data as unknown as string);
+        for (const f of hotEventListenersMap.get(payload.event)!) {
+          f(payload.data);
+        }
+      };
+
+      webSocket.addEventListener("message", listener as any);
+      hotDispose = () => {
+        webSocket.removeEventListener("message", listener as any);
+      };
+    },
+    close() {
+      hotDispose?.();
+      hotDispose = undefined;
+    },
+    on(event: string, listener: (...args: any[]) => any) {
+      if (!hotEventListenersMap.get(event)) {
+        hotEventListenersMap.set(event, new Set());
+      }
+      hotEventListenersMap.get(event)!.add(listener);
+    },
+    off(event: string, listener: (...args: any[]) => any) {
+      hotEventListenersMap.get(event)!.delete(listener);
+    },
+    send(...args: any[]) {
+      let payload: any;
+      if (typeof args[0] === "string") {
+        payload = {
+          type: "custom",
+          event: args[0],
+          data: args[1],
+        };
+      } else {
+        payload = args[0];
+      }
+      webSocket.send(JSON.stringify(payload));
+    },
+  };
 }
