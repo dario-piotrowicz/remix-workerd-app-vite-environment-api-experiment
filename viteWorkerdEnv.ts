@@ -84,8 +84,7 @@ async function createWorkerdDevEnvironment(
       }
 
       return async (req: Request) => {
-        // TODO: ideally we should pass the request itself and not req.url... but doing so
-        //       causes some error... this needs to be investigated
+        // TODO: ideally we should pass the request itself with close to no tweaks needed... this needs to be investigated
         return await mf.dispatchFetch(req.url, {
           method: req.method,
           // eslint-disable-next-line @typescript-eslint/ban-ts-comment
