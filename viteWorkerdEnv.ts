@@ -49,7 +49,7 @@ async function createWorkerdDevEnvironment(
     compatibilityDate: "2024-02-08",
     compatibilityFlags: ["nodejs_compat"],
     // TODO: we should read this from a toml file and not hardcode it
-    kvNamespaces: ['MY_KV'],
+    kvNamespaces: ["MY_KV"],
     bindings: {
       ROOT: config.root,
     },
@@ -74,27 +74,31 @@ async function createWorkerdDevEnvironment(
         const resp = await mf.dispatchFetch("http:0.0.0.0/__set-entrypoint", {
           headers: [["x-vite-workerd-entrypoint", entrypoint]],
         });
-        entrypointSet = resp.ok;
+        if (resp.ok) {
+          entrypointSet = resp.ok;
+        } else {
+          throw new Error(
+            `failed to set entrypoint (error: "${resp.statusText}")`
+          );
+        }
       }
 
       return async (req: Request) => {
         // TODO: ideally we should pass the request itself and not req.url... but doing so
         //       causes some error... this needs to be investigated
-        return await mf.dispatchFetch(
-          req.url,
-          {
-            method: req.method,
-            // @ts-ignore
-            body: req.body,
-            duplex: 'half',
-            headers: [
-              // note: we disable encoding since this causes issues when the minilare response
-              //       gets piped into the node one
-              ["accept-encoding", "identity"],
-              ...req.headers,
-            ],
-          }
-        );
+        return await mf.dispatchFetch(req.url, {
+          method: req.method,
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          body: req.body,
+          duplex: "half",
+          headers: [
+            // note: we disable encoding since this causes issues when the minilare response
+            //       gets piped into the node one
+            ["accept-encoding", "identity"],
+            ...req.headers,
+          ],
+        });
       };
     },
   };
