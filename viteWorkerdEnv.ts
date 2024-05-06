@@ -93,7 +93,7 @@ async function createWorkerdDevEnvironment(
           body: req.body,
           duplex: "half",
           headers: [
-            // note: we disable encoding since this causes issues when the minilare response
+            // note: we disable encoding since this causes issues when the miniflare response
             //       gets piped into the node one
             ["accept-encoding", "identity"],
             ...req.headers,
